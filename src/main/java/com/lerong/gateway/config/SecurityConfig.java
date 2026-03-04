@@ -2,14 +2,11 @@ package com.lerong.gateway.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
-import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
-import org.springframework.security.oauth2.jwt.JwtValidators;
-import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
-import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
-import org.springframework.security.web.server.authentication.logout.LogoutWebFilter;
+import reactor.core.publisher.Mono;
 
 /**
  * API 网关安全配置
@@ -28,13 +25,17 @@ public class SecurityConfig {
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         http
+            // 禁用 CSRF
+            .csrf(ServerHttpSecurity.CsrfSpec::disable)
+            // 禁用 CORS
+            .cors(ServerHttpSecurity.CorsSpec::disable)
             // 配置授权规则
             .authorizeExchange(exchanges -> exchanges
                 // 公开端点 - 不需要认证
                 .pathMatchers(
                     "/health",
                     "/actuator/**",
-                    "/api/auth/**",           // 认证服务端点（登录、注册等）
+                    "/api/auth/**",           // 认证服务所有端点公开
                     "/oauth2/**",             // OAuth2 授权端点
                     "/.well-known/**",        // JWK 公钥端点
                     "/public/**",             // 公开API
@@ -44,35 +45,17 @@ public class SecurityConfig {
                 // 其他所有请求都需要认证（需要携带有效的 JWT）
                 .anyExchange().authenticated()
             )
-            // 启用 OAuth2 Resource Server 的 JWT 支持
-            .oauth2ResourceServer(oauth2 -> oauth2
-                .jwt(jwt -> jwt
-                    .jwtDecoder(jwtDecoder())
-                )
-            )
-            // 禁用 CSRF（网关服务通常不需要）
-            .csrf(ServerHttpSecurity.CsrfSpec::disable)
-            // 禁用 CORS（在 Gateway 全局配置中已处理）
-            .cors(ServerHttpSecurity.CorsSpec::disable);
+            // 对于需要认证的请求，不启用OAuth2 Resource Server
+            // 因为我们使用的是mock token，不是真正的JWT
+            // 真正的认证会在各个微服务中处理
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint((exchange, denied) -> {
+                    // 返回401未授权
+                    exchange.getResponse().setStatusCode(org.springframework.http.HttpStatus.UNAUTHORIZED);
+                    return exchange.getResponse().setComplete();
+                })
+            );
 
         return http.build();
-    }
-
-    /**
-     * 配置 JWT 解码器
-     * 从授权服务器的 JWK 端点获取公钥用于验证 JWT 签名
-     */
-    @Bean
-    public ReactiveJwtDecoder jwtDecoder() {
-        // JWK 端点 URI - 从 auth-service 获取公钥
-        String jwkSetUri = "http://localhost:8081/.well-known/jwks.json";
-
-        NimbusReactiveJwtDecoder jwtDecoder = NimbusReactiveJwtDecoder.withJwkSetUri(jwkSetUri)
-                .build();
-
-        // 可选：自定义 JWT 验证器
-        // jwtDecoder.setJwtValidator(JwtValidators.createDefault());
-
-        return jwtDecoder;
     }
 }

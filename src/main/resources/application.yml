@@ -18,9 +18,17 @@ spring:
         - id: auth-service
           uri: http://localhost:8081
           predicates:
-            - Path=/api/auth/**, /oauth2/**, /.well-known/**
+            - Path=/api/auth/**
           filters:
-            - StripPrefix=2  # 去掉 /api/auth 前缀
+            - StripPrefix=1  # 去掉 /api 前缀,保留 /auth/**
+
+        # OAuth2相关路由 - 不需要JWT验证
+        - id: oauth2-routes
+          uri: http://localhost:8081
+          predicates:
+            - Path=/oauth2/**, /.well-known/**
+          filters:
+            - StripPrefix=0  # 保留完整路径
 
         # 用户服务路由 - 需要JWT验证
         - id: user-service
