@@ -5,6 +5,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
+import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import reactor.core.publisher.Mono;
 
@@ -57,5 +59,16 @@ public class SecurityConfig {
             );
 
         return http.build();
+    }
+
+    /**
+     * Configure JWT Decoder Bean
+     * This bean is used by JwtAuthenticationFilter to validate JWT tokens
+     */
+    @Bean
+    public ReactiveJwtDecoder jwtDecoder() {
+        // Use JWK Set URI from auth-service to validate JWT tokens
+        // This will connect to auth-service to get the public keys
+        return NimbusReactiveJwtDecoder.withJwkSetUri("http://localhost:8081/.well-known/jwks.json").build();
     }
 }
