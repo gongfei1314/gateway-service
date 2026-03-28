@@ -64,11 +64,14 @@ public class SecurityConfig {
     /**
      * Configure JWT Decoder Bean
      * This bean is used by JwtAuthenticationFilter to validate JWT tokens
+     *
+     * Note: Currently disabled because we're using mock JWT tokens
+     * When switching to real JWT tokens, uncomment the bean below
      */
-    @Bean
-    public ReactiveJwtDecoder jwtDecoder() {
-        // Use JWK Set URI from auth-service to validate JWT tokens
-        // This will connect to auth-service to get the public keys
-        return NimbusReactiveJwtDecoder.withJwkSetUri("http://localhost:8081/.well-known/jwks.json").build();
-    }
+    //@Bean
+    //public ReactiveJwtDecoder jwtDecoder() {
+    //    // Use JWK Set URI from auth-service to validate JWT tokens
+    //    // This will connect to auth-service to get the public keys
+    //    return NimbusReactiveJwtDecoder.withJwkSetUri("http://localhost:8081/.well-known/jwks.json").build();
+    //}
 }
